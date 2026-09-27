@@ -200,5 +200,75 @@ and start the backend outside Docker so it can reach the published port.
 │       └── types/                 # shared TypeScript types
 ├── nginx/default.conf
 ├── supabase/setup.sql             # storage bucket bootstrap
-└── docker-compose.yml
+├── docker-compose.yml
+├── netlify.toml                   # frontend hosting + SPA fallback
+├── scripts/
+│   ├── scan-secrets.mjs            # credential scanner (no dependencies)
+│   └── install-git-hooks.mjs       # activates .githooks/
+└── .githooks/                      # tracked git hooks
+    ├── pre-commit                  # blocks commits containing credentials
+    └── post-commit                 # pushes to origin after every commit
 ```
+
+---
+
+## 🔐 Secret protection and auto-push
+
+Two git hooks are tracked in `.githooks/`. They are enabled with one command:
+
+```bash
+cd backend
+npm run hooks:install        # sets core.hooksPath = .githooks
+```
+
+They live in the repository rather than `.git/hooks/` so a fresh clone can turn
+them on without anyone having to remember to.
+
+**`pre-commit`** runs `scripts/scan-secrets.mjs` over the git index — not the
+working tree, so an unstaged edit cannot mask a staged secret. It detects
+Supabase and JWT API keys, `sb_secret_` keys, private key blocks, AWS / GitHub /
+Slack / Stripe tokens, database URLs carrying an inline password, and
+secret-shaped assignments. A finding **blocks the commit**. Placeholder values
+are filtered out, so `backend/.env.example` passes cleanly.
+
+**`post-commit`** pushes to `origin`. It stands down during a rebase, merge or
+cherry-pick, on a detached HEAD, and when the branch has no upstream yet. A push
+failure prints a warning but never fails the commit, because the commit is
+already written by then.
+
+```bash
+git add . && git commit -m "..."      # scan runs, then pushes automatically
+```
+
+### Opting out
+
+| Variable | Effect |
+|---|---|
+| `KIC_SKIP_SECRET_SCAN=1` | skip the credential scan for one commit |
+| `KIC_NO_PUSH=1` | skip auto-push for one commit |
+
+If the scanner flags a false positive, add the file to `ALLOWED_FILES` in
+`scripts/scan-secrets.mjs` with a comment saying why, rather than reaching for
+the override.
+
+### Running the scan by hand
+
+```bash
+cd backend
+npm run secrets:scan           # every tracked file
+npm run secrets:scan-staged    # only what is about to be committed
+node ../scripts/scan-secrets.mjs --all --strict   # treat advisories as fatal
+```
+
+### What is deliberately still public
+
+`README.md` and `backend/prisma/seed.ts` both contain the demo passwords listed
+above. That is intentional — a fresh clone has to be runnable — but it means
+anyone can deploy this project and sign in as an admin. Change the passwords in
+`seed.ts` and re-run `npm run db:seed`, or keep the repository private, before
+using it for anything real.
+
+Real credentials belong in `backend/.env`, which is gitignored. Anything that
+reaches a commit stays reachable in history even after a later delete, so rotate
+a key immediately if it is ever committed by mistake.
+
