@@ -1,0 +1,408 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  name               String
+  email              String   @unique
+  password           String
+  role               String   @default("VIEWER")
+  isActive           Boolean  @default(true)
+  lastLoginAt        DateTime?
+  passwordResetToken String?
+  passwordResetExpiry DateTime?
+  supplierId         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  supplier           Supplier?             @relation(fields: [supplierId], references: [id])
+  assignedShipments   Shipment[]              @relation("AssignedEmployee")
+  statusHistories     ShipmentStatusHistory[]
+  uploadedDocuments   Document[]
+  sentNotifications   Notification[]
+  activityLogs        ActivityLog[]
+  supplierInvoices    SupplierInvoice[]
+
+  @@map("users")
+}
+
+model Customer {
+  id              String       @id @default(cuid())
+  customerId      String       @unique
+  companyName     String
+  contactPerson   String?
+  email           String?
+  phone           String?
+  whatsapp        String?
+  address         String?
+  city            String?
+  country         String       @default("Saudi Arabia")
+  vatNumber       String?
+  paymentTerms    String       @default("NET_30")
+  customerType    String       @default("CORPORATE")
+  creditLimit     Float?
+  notes           String?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  shipments    Shipment[]
+  quotations   Quotation[]
+  invoices     Invoice[]
+
+  @@index([companyName])
+  @@index([email])
+  @@map("customers")
+}
+
+model Supplier {
+  id            String   @id @default(cuid())
+  companyName   String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  country       String?
+  services      String?
+  notes         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shipments     Shipment[]
+  users         User[]
+  invoices      SupplierInvoice[]
+
+  @@map("suppliers")
+}
+
+model Carrier {
+  id            String      @id @default(cuid())
+  companyName   String
+  carrierType   String      @default("SHIPPING_LINE")
+  contactPerson String?
+  email         String?
+  phone         String?
+  country       String?
+  routes        String?
+  iataCode      String?
+  scacCode      String?
+  notes         String?
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  shipments     Shipment[]
+
+  @@map("carriers")
+}
+
+model Shipment {
+  id               String         @id @default(cuid())
+  shipmentNumber   String         @unique
+  customerId       String
+  serviceType      String         @default("AIR_FREIGHT")
+  shipmentType     String         @default("IMPORT")
+  origin           String
+  destination      String
+  pickupAddress    String?
+  deliveryAddress  String?
+  supplierId       String?
+  carrierId        String?
+  awbBlNumber      String?
+  containerNumber  String?
+  bookingNumber    String?
+  cargoDescription String?
+  cargoType        String         @default("GENERAL")
+  numberOfPackages Int?
+  weight           Float?
+  volume           Float?
+  freightCost      Float?         @default(0)
+  sellingPrice     Float?         @default(0)
+  profit           Float?         @default(0)
+  profitMargin     Float?         @default(0)
+  currency         String         @default("SAR")
+  pickupDate       DateTime?
+  etd              DateTime?
+  eta              DateTime?
+  actualDeliveryDate DateTime?
+  status           String         @default("BOOKED")
+  assignedUserId   String?
+  notes            String?
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  customer         Customer               @relation(fields: [customerId], references: [id])
+  supplier         Supplier?              @relation(fields: [supplierId], references: [id])
+  carrier          Carrier?               @relation(fields: [carrierId], references: [id])
+  assignedUser     User?                  @relation("AssignedEmployee", fields: [assignedUserId], references: [id])
+  statusHistory    ShipmentStatusHistory[]
+  invoices         Invoice[]
+  expenses         Expense[]
+  documents        Document[]             @relation("ShipmentDocuments")
+  supplierInvoices SupplierInvoice[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([serviceType])
+  @@index([createdAt])
+  @@index([awbBlNumber])
+  @@index([containerNumber])
+  @@map("shipments")
+}
+
+model ShipmentStatusHistory {
+  id           String         @id @default(cuid())
+  shipmentId   String
+  status       String
+  notes        String?
+  location     String?
+  updatedById  String
+  createdAt    DateTime       @default(now())
+
+  shipment     Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  updatedBy    User     @relation(fields: [updatedById], references: [id])
+
+  @@index([shipmentId])
+  @@map("shipment_status_histories")
+}
+
+model Quotation {
+  id                 String          @id @default(cuid())
+  quotationNumber    String          @unique
+  customerId         String
+  origin             String?
+  destination        String?
+  serviceType        String?
+  cargoDescription   String?
+  weight             Float?
+  volume             Float?
+  freightCharges     Float           @default(0)
+  customsCharges     Float           @default(0)
+  transportCharges   Float           @default(0)
+  handlingCharges    Float           @default(0)
+  otherCharges       Float           @default(0)
+  subtotal           Float           @default(0)
+  discount           Float           @default(0)
+  vatRate            Float           @default(15)
+  vatAmount          Float           @default(0)
+  grandTotal         Float           @default(0)
+  validUntil         DateTime?
+  termsConditions    String?
+  notes              String?
+  status             String          @default("DRAFT")
+  sentAt             DateTime?
+  acceptedAt         DateTime?
+  rejectedAt         DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  customer    Customer        @relation(fields: [customerId], references: [id])
+  items       QuotationItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id            String    @id @default(cuid())
+  quotationId   String
+  description   String
+  quantity      Float     @default(1)
+  unitPrice     Float     @default(0)
+  total         Float     @default(0)
+  sortOrder     Int       @default(0)
+
+  quotation     Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@map("quotation_items")
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  customerId      String
+  shipmentId      String?
+  invoiceDate     DateTime      @default(now())
+  dueDate         DateTime?
+  subtotal        Float         @default(0)
+  vatRate         Float         @default(15)
+  vatAmount       Float         @default(0)
+  discount        Float         @default(0)
+  grandTotal      Float         @default(0)
+  paidAmount      Float         @default(0)
+  balance         Float         @default(0)
+  currency        String        @default("SAR")
+  status          String        @default("DRAFT")
+  notes           String?
+  sentAt          DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  shipment    Shipment?     @relation(fields: [shipmentId], references: [id])
+  items       InvoiceItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([shipmentId])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  description  String
+  quantity     Float    @default(1)
+  unitPrice    Float    @default(0)
+  total        Float    @default(0)
+  sortOrder    Int      @default(0)
+
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+/// An invoice submitted by a supplier for goods/services rendered.
+/// Stored for records and reconciliation only — it is intentionally NOT
+/// converted into an Expense. Use `total` for the gross amount payable.
+model SupplierInvoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String
+  supplierId    String
+  shipmentId    String?
+
+  invoiceDate DateTime @default(now())
+  dueDate     DateTime?
+
+  subtotal   Float  @default(0)
+  vatRate    Float  @default(15)
+  vatAmount  Float  @default(0)
+  total      Float  @default(0)
+  currency   String @default("SAR")
+
+  /// SUBMITTED | REVIEWED  (storage/records only — no approval workflow)
+  status String @default("SUBMITTED")
+
+  notes String?
+
+  // Supabase Storage object path (not a public URL)
+  storagePath  String
+  originalName String
+  fileSize     Int?
+  mimeType     String?
+
+  uploadedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  supplier   Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  uploadedBy User      @relation(fields: [uploadedById], references: [id])
+
+  @@index([supplierId])
+  @@index([shipmentId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("supplier_invoices")
+}
+
+model Expense {
+  id              String          @id @default(cuid())
+  shipmentId      String?
+  vendor          String?
+  category        String          @default("OTHER")
+  description     String
+  amount          Float
+  currency        String          @default("SAR")
+  exchangeRate    Float           @default(1)
+  amountInSAR     Float?
+  expenseDate     DateTime        @default(now())
+  paymentMethod   String?
+  receiptPath     String?
+  notes           String?
+  isApproved      Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  shipment        Shipment?       @relation(fields: [shipmentId], references: [id])
+
+  @@index([shipmentId])
+  @@index([category])
+  @@index([expenseDate])
+  @@map("expenses")
+}
+
+model Document {
+  id            String       @id @default(cuid())
+  entityType    String       // 'shipment' | 'customer' | 'quotation' | 'invoice'
+  entityId      String
+  documentType  String       @default("OTHER")
+  originalName  String
+  filename      String
+  filePath      String
+  fileSize      Int?
+  mimeType      String?
+  notes         String?
+  uploadedById  String
+  createdAt     DateTime     @default(now())
+
+  uploadedBy    User         @relation(fields: [uploadedById], references: [id])
+  shipment      Shipment?    @relation("ShipmentDocuments", fields: [entityId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("documents")
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  userId      String?
+  email       String?
+  phone       String?
+  channel     String              @default("EMAIL")
+  subject     String?
+  message     String
+  templateId  String?
+  metadata    String?
+  status      String              @default("PENDING")
+  sentAt      DateTime?
+  readAt      DateTime?
+  sentById    String?
+  createdAt   DateTime            @default(now())
+
+  sentBy      User?               @relation(fields: [sentById], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entity      String?
+  entityId    String?
+  description String?
+  metadata    String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}

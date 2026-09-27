@@ -1,0 +1,2 @@
+# Keeps this directory in version control so express.static has a target in a
+# fresh clone. Uploaded files are ignored via .gitignore.

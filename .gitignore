@@ -1,0 +1,31 @@
+# Node modules
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Builds and Distribution
+dist/
+build/
+backend/dist/
+frontend/dist/
+
+# Environment variables
+# .env holds real credentials (Supabase password, service_role key, JWT secret)
+# and must never be committed. The .env.example templates are tracked.
+.env
+*.env.local
+!.env.example
+
+# Database & SQLite files
+*.db
+*.sqlite
+prisma/dev.db
+
+# File uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# System & OS files
+.DS_Store
+Thumbs.db
+*.log

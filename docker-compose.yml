@@ -1,0 +1,81 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The database is Supabase (managed Postgres), NOT the local container below.
+# Create the project at https://supabase.com, then:
+#   1. Dashboard → SQL Editor → run supabase/setup.sql (creates the storage bucket)
+#   2. Project Settings → Database → copy the connection strings into backend/.env
+#   3. Project Settings → API → copy URL + service_role key into backend/.env
+#
+# The `postgres` service below is retained ONLY as an optional local fallback for
+# offline development. It is not started unless you enable it with:
+#   docker compose --profile localdb up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  backend:
+    build:
+      # Context is the repo root so shared files can be copied in.
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: kic_backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "5000:5000"
+    volumes:
+      # Legacy local uploads + logs. Supplier invoice files live in Supabase
+      # Storage, so nothing is lost when this container is replaced.
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      # Repo root, so nginx/default.conf is reachable.
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: kic_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Optional local Postgres for offline development only.
+  # Enabled via: docker compose --profile localdb up -d
+  # When using it, point DATABASE_URL/DIRECT_URL at postgres:5432 and change the
+  # Prisma datasource provider accordingly — Postgres, which is what the schema
+  # and the reports queries already target.
+  postgres:
+    profiles: ["localdb"]
+    image: postgres:15-alpine
+    container_name: kic_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: kic_user
+      POSTGRES_PASSWORD: kic_password_2026
+      POSTGRES_DB: kreativ_logistics
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kic_user -d kreativ_logistics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  uploads_data:
+  logs_data:

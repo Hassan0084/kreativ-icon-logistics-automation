@@ -1,0 +1,36 @@
+# Build context is the repository root, so this guards BOTH services.
+
+# Dependencies are installed inside the image
+**/node_modules
+
+# Build output — rebuilt in the image
+**/dist
+**/build
+
+# Secrets. Never bake .env into an image layer.
+**/.env
+**/.env.*
+!.env.example
+
+# Local database and uploads
+**/prisma/dev.db
+**/*.db
+**/*.sqlite
+backend/uploads
+
+# Logs
+**/*.log
+**/logs
+
+# VCS / OS / editor
+.git
+.gitignore
+**/.DS_Store
+**/Thumbs.db
+**/.vscode
+**/.idea
+
+# Docs & compose files are not needed inside images
+README.md
+docker-compose.yml
+supabase
