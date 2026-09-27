@@ -13,13 +13,41 @@ frontend/dist/
 # .env holds real credentials (Supabase password, service_role key, JWT secret)
 # and must never be committed. The .env.example templates are tracked.
 .env
-*.env.local
+.env.*
 !.env.example
+*.env.local
+
+# Credentials, keys and certificates. Nothing in these categories belongs in
+# version control, and anything that lands in history stays reachable after a
+# delete, so the ignore rule has to exist before the file is ever created.
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.ppk
+*.asc
+*.gpg
+.netrc
+.npmrc.local
+.pgpass
+credentials.json
+service-account*.json
+*service-role*.json
+supabase/.temp/
 
 # Database & SQLite files
 *.db
 *.sqlite
 prisma/dev.db
+*.sql.gz
+dump*.sql
 
 # File uploads
 backend/uploads/*

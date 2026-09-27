@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# Push every commit to origin automatically.
+#
+# The commit is already written by the time this runs, so a push failure here
+# must not fail the commit. It prints a warning and exits 0, leaving the
+# commit local to push manually later.
+#
+# Opt out for a single commit:
+#     KIC_NO_PUSH=1 git commit -m "..."
+#
+# Opt out for a shell session:
+#     export KIC_NO_PUSH=1
+
+set -e
+
+if [ "$KIC_NO_PUSH" = "1" ]; then
+  echo "  post-commit: auto-push skipped (KIC_NO_PUSH=1)"
+  exit 0
+fi
+
+git_dir=$(git rev-parse --git-dir)
+
+# Never push from the middle of a history-rewriting operation. The tree state
+# is ambiguous there and the "current" commit is not what the user just made.
+for marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD BISECT_LOG; do
+  if [ -e "$git_dir/$marker" ]; then
+    echo "  post-commit: auto-push skipped ($marker in progress)"
+    exit 0
+  fi
+done
+
+# A detached HEAD has no branch to advance.
+if [ -z "$(git symbolic-ref --quiet --short HEAD)" ]; then
+  echo "  post-commit: auto-push skipped (detached HEAD)"
+  exit 0
+fi
+
+branch=$(git symbolic-ref --quiet --short HEAD)
+
+# A brand new branch with no upstream has nothing sensible to push to yet.
+if ! git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1; then
+  echo "  post-commit: '$branch' has no upstream yet, skipping auto-push."
+  echo "              Run:  git push -u origin $branch"
+  exit 0
+fi
+
+echo "  post-commit: pushing $branch to origin..."
+
+if git push origin "$branch"; then
+  echo "  post-commit: pushed."
+else
+  # Never fail the commit. The work is safe locally.
+  echo "" >&2
+  echo "  post-commit: AUTO-PUSH FAILED. Your commit is saved locally." >&2
+  echo "              Fix the connection or auth, then run:  git push" >&2
+  echo "" >&2
+fi
+
+exit 0

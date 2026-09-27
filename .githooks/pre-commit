@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# Refuse a commit that contains a credential.
+#
+# Scans the git index, not the working tree, so unstaged edits cannot mask a
+# staged secret and an already-tracked file that is now gitignored still gets
+# checked.
+#
+# Escape hatch, if you are certain a finding is a false positive:
+#     KIC_SKIP_SECRET_SCAN=1 git commit -m "..."
+# A false positive should instead be whitelisted in ALLOWED_FILES inside
+# scripts/scan-secrets.mjs, with a comment explaining why.
+
+set -e
+
+if [ "$KIC_SKIP_SECRET_SCAN" = "1" ]; then
+  echo "  pre-commit: secret scan SKIPPED (KIC_SKIP_SECRET_SCAN=1)" >&2
+  exit 0
+fi
+
+repo_root=$(git rev-parse --show-toplevel)
+scanner="$repo_root/scripts/scan-secrets.mjs"
+
+if [ ! -f "$scanner" ]; then
+  echo "  pre-commit: scanner not found at scripts/scan-secrets.mjs" >&2
+  echo "  Refusing to commit without the check. Set KIC_SKIP_SECRET_SCAN=1 to override." >&2
+  exit 1
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "  pre-commit: node is not on PATH, cannot run the secret scanner." >&2
+  echo "  Refusing to commit without the check. Set KIC_SKIP_SECRET_SCAN=1 to override." >&2
+  exit 1
+fi
+
+node "$scanner" --staged
+exit $?

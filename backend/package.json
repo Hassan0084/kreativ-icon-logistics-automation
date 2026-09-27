@@ -12,7 +12,10 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:prod": "node dist/prisma/seed.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "hooks:install": "node ../scripts/install-git-hooks.mjs",
+    "secrets:scan": "node ../scripts/scan-secrets.mjs --all",
+    "secrets:scan-staged": "node ../scripts/scan-secrets.mjs --staged"
   },
   "dependencies": {
     "@prisma/client": "^5.9.1",
