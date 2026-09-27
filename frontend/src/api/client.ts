@@ -1,7 +1,17 @@
 import axios from 'axios';
 
+/**
+ * Base URL for the API.
+ *
+ * In local development the Vite dev server proxies `/api` to the backend on
+ * port 5000, so the relative default works. Once the frontend is deployed
+ * separately (e.g. Netlify) there is no local backend to proxy to, so
+ * `VITE_API_URL` must point at the deployed API origin.
+ */
+const baseURL = import.meta.env.VITE_API_URL || '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
