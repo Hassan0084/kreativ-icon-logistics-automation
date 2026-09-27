@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -91,37 +91,6 @@ export default function LoginPage() {
               Sign In to System
             </Button>
           </form>
-
-          {/* Seed demo quick fill helper */}
-          <div className="mt-6 pt-6 border-t border-dark-border/60">
-            <p className="text-xs font-semibold text-slate-400 mb-3 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" /> Default Seed Demo Accounts:
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('admin@kreativicon.com');
-                  setPassword('admin123');
-                }}
-                className="p-2 rounded-xl bg-slate-900/60 border border-dark-border text-slate-300 hover:border-primary-500/50 hover:text-white transition-colors text-left font-mono"
-              >
-                <span className="font-semibold text-primary-400 block">Admin</span>
-                admin@kreativicon.com
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('manager@kreativicon.com');
-                  setPassword('manager123');
-                }}
-                className="p-2 rounded-xl bg-slate-900/60 border border-dark-border text-slate-300 hover:border-accent-500/50 hover:text-white transition-colors text-left font-mono"
-              >
-                <span className="font-semibold text-accent-400 block">Manager</span>
-                manager@kreativicon.com
-              </button>
-            </div>
-          </div>
 
           <div className="mt-6 text-center">
             <Link
